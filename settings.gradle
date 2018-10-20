@@ -1,1 +1,1 @@
-include ':app', ':samples'
+include ':tablayout', ':samples'
