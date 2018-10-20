@@ -2,7 +2,7 @@
 
 修改 support 包 TabLayout，实现新浪微博/即刻 APP 蚯蚓导航效果
 
-![](art/tablayout-demo.gif)
+<img src="art/tablayout-demo.gif" width="375"/>
 
 ## 用法
 
@@ -41,9 +41,10 @@ dependencies {
 }
 ```
 
-Share this release:
 
 ### 2. 布局
+
+只需要把你原来使用的 TabLayout 替换为 `com.antiless.support.widget.TabLayout`，即可启用蚯蚓动画效果。然后加上一些自定义 indicator 属性，来实现你的自定义样式。
 
 ```xml
 <com.antiless.support.widget.TabLayout
