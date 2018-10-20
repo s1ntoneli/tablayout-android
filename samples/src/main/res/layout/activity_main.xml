@@ -13,10 +13,10 @@
         android:layout_gravity="center_horizontal"
         app:tabMode="scrollable"
         app:tabIndicatorHeight="3dp"
-        app:indicatorStartColor="@android:color/holo_blue_bright"
-        app:indicatorEndColor="@android:color/holo_blue_dark"
-        app:indicatorMarginStart="25dp"
-        app:indicatorMarginEnd="25dp"
+        app:indicatorStartColor="#d6694e"
+        app:indicatorEndColor="#e73820"
+        app:indicatorMarginStart="20dp"
+        app:indicatorMarginEnd="20dp"
         app:indicatorMarginBottom="3dp">
     </com.antiless.support.widget.TabLayout>
 
