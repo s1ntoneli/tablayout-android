@@ -2,6 +2,8 @@
 
 修改 support 包 TabLayout，实现新浪微博/即刻 APP 蚯蚓导航效果
 
+![](art/tablayout-demo.gif)
+
 ## 用法
 
 TabLayout 核心用法不变，新增一些自定义属性。
