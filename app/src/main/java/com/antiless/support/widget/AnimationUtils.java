@@ -19,6 +19,7 @@ package com.antiless.support.widget;
 import android.support.v4.view.animation.FastOutLinearInInterpolator;
 import android.support.v4.view.animation.FastOutSlowInInterpolator;
 import android.support.v4.view.animation.LinearOutSlowInInterpolator;
+import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
@@ -40,6 +41,20 @@ class AnimationUtils {
 
     static int lerp(int startValue, int endValue, float fraction) {
         return startValue + Math.round(fraction * (endValue - startValue));
+    }
+
+    static class AnimationListenerAdapter implements Animation.AnimationListener {
+        @Override
+        public void onAnimationStart(Animation animation) {
+        }
+
+        @Override
+        public void onAnimationEnd(Animation animation) {
+        }
+
+        @Override
+        public void onAnimationRepeat(Animation animation) {
+        }
     }
 
 }

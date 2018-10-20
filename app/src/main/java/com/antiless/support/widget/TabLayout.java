@@ -16,11 +16,6 @@
 
 package com.antiless.support.widget;
 
-import static android.support.annotation.RestrictTo.Scope.LIBRARY_GROUP;
-import static android.support.v4.view.ViewPager.SCROLL_STATE_DRAGGING;
-import static android.support.v4.view.ViewPager.SCROLL_STATE_IDLE;
-import static android.support.v4.view.ViewPager.SCROLL_STATE_SETTLING;
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
@@ -30,7 +25,12 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.database.DataSetObserver;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.support.annotation.ColorInt;
@@ -39,6 +39,7 @@ import android.support.annotation.IntDef;
 import android.support.annotation.LayoutRes;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.Px;
 import android.support.annotation.RestrictTo;
 import android.support.annotation.StringRes;
 import android.support.design.R;
@@ -74,6 +75,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Iterator;
+
+import static android.support.annotation.RestrictTo.Scope.LIBRARY_GROUP;
+import static android.support.v4.view.ViewPager.SCROLL_STATE_DRAGGING;
+import static android.support.v4.view.ViewPager.SCROLL_STATE_IDLE;
+import static android.support.v4.view.ViewPager.SCROLL_STATE_SETTLING;
 
 /**
  * TabLayout provides a horizontal layout to display tabs.
@@ -310,7 +316,6 @@ public class TabLayout extends HorizontalScrollView {
 
         mTabStrip.setSelectedIndicatorHeight(
                 a.getDimensionPixelSize(R.styleable.TabLayout_tabIndicatorHeight, 0));
-        mTabStrip.setSelectedIndicatorColor(a.getColor(R.styleable.TabLayout_tabIndicatorColor, 0));
 
         mTabPaddingStart = mTabPaddingTop = mTabPaddingEnd = mTabPaddingBottom = a
                 .getDimensionPixelSize(R.styleable.TabLayout_tabPadding, 0);
@@ -359,7 +364,27 @@ public class TabLayout extends HorizontalScrollView {
         mContentInsetStart = a.getDimensionPixelSize(R.styleable.TabLayout_tabContentStart, 0);
         mMode = a.getInt(R.styleable.TabLayout_tabMode, MODE_FIXED);
         mTabGravity = a.getInt(R.styleable.TabLayout_tabGravity, GRAVITY_FILL);
+
         a.recycle();
+
+        TypedArray ma = context.obtainStyledAttributes(attrs,
+                com.antiless.support.tablayout.R.styleable.TabLayout);
+        int indicatorMarginStart = ma.getDimensionPixelSize(
+                com.antiless.support.tablayout.R.styleable.TabLayout_indicatorMarginStart, 0);
+        int indicatorMarginEnd = ma.getDimensionPixelSize(
+                com.antiless.support.tablayout.R.styleable.TabLayout_indicatorMarginEnd, 0);
+        int indicatorMarginBottom = ma.getDimensionPixelSize(
+                com.antiless.support.tablayout.R.styleable.TabLayout_indicatorMarginBottom, 0);
+        int indicatorStartColor = ma.getColor(
+                com.antiless.support.tablayout.R.styleable.TabLayout_indicatorStartColor, 0);
+        int indicatorEndColor = ma.getColor(
+                com.antiless.support.tablayout.R.styleable.TabLayout_indicatorEndColor, 0);
+
+        mTabStrip.setSelectedIndicatorColor(indicatorStartColor, indicatorEndColor);
+        mTabStrip.setSelectedIndicatorMargin(indicatorMarginStart, indicatorMarginEnd);
+        mTabStrip.setSelectedIndicatorMarginBottom(indicatorMarginBottom);
+
+        ma.recycle();
 
         // TODO add attr for these
         final Resources res = getResources();
@@ -379,6 +404,10 @@ public class TabLayout extends HorizontalScrollView {
      */
     public void setSelectedTabIndicatorColor(@ColorInt int color) {
         mTabStrip.setSelectedIndicatorColor(color);
+    }
+
+    public void setSelectedTabIndicatorColor(@ColorInt int startColor, @ColorInt int endColor) {
+        mTabStrip.setSelectedIndicatorColor(startColor, endColor);
     }
 
     /**
@@ -407,7 +436,7 @@ public class TabLayout extends HorizontalScrollView {
     }
 
     void setScrollPosition(int position, float positionOffset, boolean updateSelectedText,
-            boolean updateIndicatorPosition) {
+                           boolean updateIndicatorPosition) {
         final int roundedPosition = Math.round(position + positionOffset);
         if (roundedPosition < 0 || roundedPosition >= mTabStrip.getChildCount()) {
             return;
@@ -776,7 +805,7 @@ public class TabLayout extends HorizontalScrollView {
     }
 
     private void setupWithViewPager(@Nullable final ViewPager viewPager, boolean autoRefresh,
-            boolean implicitSetup) {
+                                    boolean implicitSetup) {
         if (mViewPager != null) {
             // If we've already been setup with a ViewPager, remove us from it
             if (mPageChangeListener != null) {
@@ -1724,7 +1753,7 @@ public class TabLayout extends HorizontalScrollView {
         }
 
         private void updateTextAndIcon(@Nullable final TextView textView,
-                @Nullable final ImageView iconView) {
+                                       @Nullable final ImageView iconView) {
             final Drawable icon = mTab != null ? mTab.getIcon() : null;
             final CharSequence text = mTab != null ? mTab.getText() : null;
             final CharSequence contentDesc = mTab != null ? mTab.getContentDescription() : null;
@@ -1793,17 +1822,42 @@ public class TabLayout extends HorizontalScrollView {
         private int mIndicatorLeft = -1;
         private int mIndicatorRight = -1;
 
+        private RectF mIndicatorRect = new RectF();
+
+        private int mIndicatorMarginLeft = 0;
+        private int mIndicatorMarginRight = 0;
+        private int mIndicatorMarginBottom = 0;
+
         private ValueAnimator mIndicatorAnimator;
+
+        private int mStartColor;
+        private int mEndColor;
+        private boolean mIsColorDirty = true;
 
         SlidingTabStrip(Context context) {
             super(context);
             setWillNotDraw(false);
             mSelectedIndicatorPaint = new Paint();
+            mSelectedIndicatorPaint.setAntiAlias(true);
+        }
+
+        void setSelectedIndicatorMarginBottom(@Px int margin) {
+            mIndicatorMarginBottom = margin;
+        }
+        void setSelectedIndicatorMargin(@Px int marginLeft, @Px int marginRight) {
+            mIndicatorMarginLeft = marginLeft;
+            mIndicatorMarginRight = marginRight;
         }
 
         void setSelectedIndicatorColor(int color) {
-            if (mSelectedIndicatorPaint.getColor() != color) {
-                mSelectedIndicatorPaint.setColor(color);
+            setSelectedIndicatorColor(color, color);
+        }
+
+        void setSelectedIndicatorColor(int startColor, int endColor) {
+            if (startColor != mStartColor || endColor != mEndColor) {
+                mStartColor = startColor;
+                mEndColor = endColor;
+                mIsColorDirty = true;
                 ViewCompat.postInvalidateOnAnimation(this);
             }
         }
@@ -1939,10 +1993,13 @@ public class TabLayout extends HorizontalScrollView {
                 if (mSelectionOffset > 0f && mSelectedPosition < getChildCount() - 1) {
                     // Draw the selection partway between the tabs
                     View nextTitle = getChildAt(mSelectedPosition + 1);
-                    left = (int) (mSelectionOffset * nextTitle.getLeft() +
-                            (1.0f - mSelectionOffset) * left);
-                    right = (int) (mSelectionOffset * nextTitle.getRight() +
-                            (1.0f - mSelectionOffset) * right);
+                    if (mSelectionOffset <= 0.5f) {
+                        left = selectedTitle.getLeft();
+                        right = AnimationUtils.lerp(right, nextTitle.getRight(), mSelectionOffset * 2);
+                    } else {
+                        left = AnimationUtils.lerp(left, nextTitle.getLeft(), (mSelectionOffset - 0.5f) * 2);
+                        right = nextTitle.getRight();
+                    }
                 }
             } else {
                 left = right = -1;
@@ -1954,8 +2011,8 @@ public class TabLayout extends HorizontalScrollView {
         void setIndicatorPosition(int left, int right) {
             if (left != mIndicatorLeft || right != mIndicatorRight) {
                 // If the indicator's left/right has changed, invalidate
-                mIndicatorLeft = left;
-                mIndicatorRight = right;
+                mIndicatorLeft = left + mIndicatorMarginLeft;
+                mIndicatorRight = right - mIndicatorMarginRight;
                 ViewCompat.postInvalidateOnAnimation(this);
             }
         }
@@ -1980,29 +2037,8 @@ public class TabLayout extends HorizontalScrollView {
             final int startLeft;
             final int startRight;
 
-            if (Math.abs(position - mSelectedPosition) <= 1) {
-                // If the views are adjacent, we'll animate from edge-to-edge
-                startLeft = mIndicatorLeft;
-                startRight = mIndicatorRight;
-            } else {
-                // Else, we'll just grow from the nearest edge
-                final int offset = dpToPx(MOTION_NON_ADJACENT_OFFSET);
-                if (position < mSelectedPosition) {
-                    // We're going end-to-start
-                    if (isRtl) {
-                        startLeft = startRight = targetLeft - offset;
-                    } else {
-                        startLeft = startRight = targetRight + offset;
-                    }
-                } else {
-                    // We're going start-to-end
-                    if (isRtl) {
-                        startLeft = startRight = targetRight + offset;
-                    } else {
-                        startLeft = startRight = targetLeft - offset;
-                    }
-                }
-            }
+            startLeft = mIndicatorLeft;
+            startRight = mIndicatorRight;
 
             if (startLeft != targetLeft || startRight != targetRight) {
                 ValueAnimator animator = mIndicatorAnimator = new ValueAnimator();
@@ -2013,9 +2049,25 @@ public class TabLayout extends HorizontalScrollView {
                     @Override
                     public void onAnimationUpdate(ValueAnimator animator) {
                         final float fraction = animator.getAnimatedFraction();
-                        setIndicatorPosition(
-                                AnimationUtils.lerp(startLeft, targetLeft, fraction),
-                                AnimationUtils.lerp(startRight, targetRight, fraction));
+                        int left, right;
+                        if (mSelectedPosition < position) {
+                            if (fraction <= 0.5f) {
+                                left = startLeft;
+                                right = AnimationUtils.lerp(startRight, targetRight, fraction * 2);
+                            } else {
+                                left = AnimationUtils.lerp(startLeft, targetLeft, (fraction - 0.5f) * 2);
+                                right = targetRight;
+                            }
+                        } else {
+                            if (fraction <= 0.5f) {
+                                left = AnimationUtils.lerp(startLeft, targetLeft, fraction * 2);
+                                right = startRight;
+                            } else {
+                                left = targetLeft;
+                                right = AnimationUtils.lerp(startRight, targetRight, (fraction - 0.5f) * 2);
+                            }
+                        }
+                        setIndicatorPosition(left, right);
                     }
                 });
                 animator.addListener(new AnimatorListenerAdapter() {
@@ -2033,11 +2085,38 @@ public class TabLayout extends HorizontalScrollView {
         public void draw(Canvas canvas) {
             super.draw(canvas);
 
-            // Thick colored underline below the current selection
-            if (mIndicatorLeft >= 0 && mIndicatorRight > mIndicatorLeft) {
-                canvas.drawRect(mIndicatorLeft, getHeight() - mSelectedIndicatorHeight,
-                        mIndicatorRight, getHeight(), mSelectedIndicatorPaint);
+            int left = mIndicatorLeft;
+            int right = mIndicatorRight;
+
+            // get edges of
+            if (mSelectionOffset > 0 && mSelectedPosition < getChildCount() - 1) {
+                View leftView = getChildAt(mSelectedPosition);
+                View rightView = getChildAt(mSelectedPosition + 1);
+                left = leftView.getLeft() + mIndicatorMarginLeft;
+                right = rightView.getRight() - mIndicatorMarginRight;
             }
+
+            // ensure color updated
+            if (mSelectedIndicatorPaint.getShader() == null || mIsColorDirty) {
+                LinearGradient gradient = new LinearGradient(0, 0, getWidth(), 0, mStartColor, mEndColor, Shader.TileMode.CLAMP);
+                mSelectedIndicatorPaint.setShader(gradient);
+            }
+
+            // visible rect
+            mIndicatorRect.set(mIndicatorLeft, getHeight() - mSelectedIndicatorHeight - mIndicatorMarginBottom,
+                    mIndicatorRight, getHeight() - mIndicatorMarginBottom);
+
+            // show dst round rect only, but with src background
+            int sc = canvas.saveLayer(0, 0, getWidth(), getHeight(), null, Canvas.ALL_SAVE_FLAG);
+
+            // draw dst round rect
+            canvas.drawRoundRect(mIndicatorRect, mSelectedIndicatorHeight/2, mSelectedIndicatorHeight/2, mSelectedIndicatorPaint);
+            mSelectedIndicatorPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+            // draw src background on
+            canvas.drawRect(left, getHeight() - mSelectedIndicatorHeight - mIndicatorMarginBottom,
+                    right, getHeight() - mIndicatorMarginBottom, mSelectedIndicatorPaint);
+            mSelectedIndicatorPaint.setXfermode(null);
+            canvas.restoreToCount(sc);
         }
     }
 
@@ -2119,7 +2198,7 @@ public class TabLayout extends HorizontalScrollView {
 
         @Override
         public void onPageScrolled(final int position, final float positionOffset,
-                final int positionOffsetPixels) {
+                                   final int positionOffsetPixels) {
             final TabLayout tabLayout = mTabLayoutRef.get();
             if (tabLayout != null) {
                 // Only update the text selection if we're not settling, or we are settling after
@@ -2204,7 +2283,7 @@ public class TabLayout extends HorizontalScrollView {
 
         @Override
         public void onAdapterChanged(@NonNull ViewPager viewPager,
-                @Nullable PagerAdapter oldAdapter, @Nullable PagerAdapter newAdapter) {
+                                     @Nullable PagerAdapter oldAdapter, @Nullable PagerAdapter newAdapter) {
             if (mViewPager == viewPager) {
                 setPagerAdapter(newAdapter, mAutoRefresh);
             }
