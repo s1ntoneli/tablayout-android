@@ -68,4 +68,6 @@ Share this release:
 
 ## 从 TabLayout 的改动
 
-d81c7e1a426128b06b813fc929abddf823582e97
+Changes for earthworm TabLayout.
+
+[d81c7e1](https://github.com/auv1107/tablayout-android/commit/d81c7e1a426128b06b813fc929abddf823582e97)
