@@ -70,6 +70,7 @@ dependencies {
 
 
 ## 从 TabLayout 的改动
+改动很少，都在这个 patch 里了
 
 Changes for earthworm TabLayout.
 
